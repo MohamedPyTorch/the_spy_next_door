@@ -5,8 +5,54 @@ import 'package:flutter_sound/flutter_sound.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';  // Import the local notifications plugin
+
+const String notificationChannelId = 'awesome_phone_running';
+const int notificationId = 1001;
+
+void createNotificationChannel() {
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+
+  const AndroidNotificationDetails androidPlatformChannelSpecifics =
+      AndroidNotificationDetails(
+    notificationChannelId, // Channel ID
+    'Audio Streaming Service', // Channel Name
+    channelDescription: 'Notification channel for background audio streaming',
+    importance: Importance.max,
+    priority: Priority.high,
+    ticker: 'ticker',
+    icon: 'ic_notification',
+  );
+  const NotificationDetails platformChannelSpecifics =
+      NotificationDetails(android: androidPlatformChannelSpecifics);
+
+  flutterLocalNotificationsPlugin.show(
+    notificationId,
+    'AWESOME SERVICA',
+    'Initializing...',
+    platformChannelSpecifics,
+    payload: 'service_start',
+  );
+}
+
+Future<void> disableBatteryOptimization() async {
+  if (await Permission.ignoreBatteryOptimizations.isGranted) {
+    // Do nothing if the permission is already granted
+    return;
+  }
+
+  await Permission.ignoreBatteryOptimizations.request();
+
+  if (await Permission.ignoreBatteryOptimizations.isGranted) {
+    // Open battery optimization settings to let the user disable it
+    openAppSettings();
+  }
+}
 
 Future<bool> requestPermissions() async {
+  await disableBatteryOptimization();
   var status = await Permission.microphone.status;
 
   if (!status.isGranted) {
@@ -25,6 +71,38 @@ Future<bool> requestPermissions() async {
 
 void main() {
   runApp(const BackgroundApp());
+  startBackgroundService();  // Start the background service automatically when the app starts
+}
+
+void startBackgroundService() async {
+  // Request microphone permissions
+  bool hasPermission = await requestPermissions();
+  if (!hasPermission) return;
+
+  // Create the notification channel and show the notification
+  createNotificationChannel();
+
+  // Initialize the background service
+  FlutterBackgroundService().configure(
+    androidConfiguration: AndroidConfiguration(
+      onStart: onStart,
+      autoStart: true,
+      isForegroundMode: true,
+      notificationChannelId: notificationChannelId, // Channel ID
+      initialNotificationTitle: 'AWESOME SERVICE',
+      initialNotificationContent: 'Initializing...',
+      foregroundServiceNotificationId: notificationId,
+    ),
+    iosConfiguration: IosConfiguration(),
+  );
+
+  // Start the background service
+  FlutterBackgroundService().startService();
+}
+
+void onStart(ServiceInstance service) {
+  print("Service is running in the background");
+  AudioStreamService().startStreaming();
 }
 
 class BackgroundApp extends StatelessWidget {
@@ -58,7 +136,6 @@ class _StreamingScreenState extends State<StreamingScreen> {
   @override
   void dispose() {
     super.dispose();
-    _audioStreamService.stopStreaming();
   }
 
   @override
@@ -82,7 +159,7 @@ class _StreamingScreenState extends State<StreamingScreen> {
 class AudioStreamService {
   static const platform = MethodChannel('com.example.linguini/foregroundService');
   final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
-  late final IOWebSocketChannel _channel; // WebSocket channel is late
+  late final IOWebSocketChannel _channel;
   final StreamController<Uint8List> _audioStreamController = StreamController<Uint8List>();
 
   // Initialize _channel in the constructor
@@ -92,7 +169,7 @@ class AudioStreamService {
 
   Future<void> startStreaming() async {
     try {
-      print("Callinng startForegroundService");
+      // Start the method channel service
       await platform.invokeMethod('startForegroundService');
     } on PlatformException catch (e) {
       print("Failed to start service: '${e.message}'");
@@ -101,7 +178,6 @@ class AudioStreamService {
     await _recorder.openRecorder();
     await _recorder.setSubscriptionDuration(const Duration(milliseconds: 500));
 
-    // Listen to the audio stream and send data via WebSocket
     _audioStreamController.stream.listen((audioData) {
       _channel.sink.add(audioData); // Send audio data to the WebSocket server
     });
@@ -119,5 +195,9 @@ class AudioStreamService {
     await _recorder.closeRecorder();
     await _audioStreamController.close();
     _channel.sink.close(); // Close WebSocket connection
+
+    // Stop the background service
+    FlutterBackgroundService().invoke('stopService');
+    print("Background service stopped");
   }
 }

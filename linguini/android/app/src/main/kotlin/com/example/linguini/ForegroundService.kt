@@ -1,71 +1,57 @@
-import android.app.Service
-import android.os.Build
-import androidx.core.app.NotificationCompat
+package com.example.linguini
+
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import io.flutter.embedding.engine.FlutterEngine
-import io.flutter.plugin.common.MethodChannel
+import android.app.Service
 import android.content.Intent
+import android.os.Build
+import android.util.Log
+import androidx.core.app.NotificationCompat
 
 class ForegroundService : Service() {
-
-    private val CHANNEL_ID = "com.example.linguini.foregroundService"
-    private val CHANNEL_NAME = "Foreground Service"
-    private lateinit var flutterEngine: FlutterEngine
-
-    override fun onCreate() {
-        super.onCreate()
-
-        // Initialize FlutterEngine
-        flutterEngine = FlutterEngine(this)
-        flutterEngine.dartExecutor.binaryMessenger // Necessary for the MethodChannel setup
-
-        // Set up the MethodChannel for communication with Flutter
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.example.linguini/foregroundService")
-            .setMethodCallHandler { call, result ->
-                if (call.method == "startForegroundService") {
-                    startForegroundService()
-                    result.success(null)
-                } else {
-                    result.notImplemented()
-                }
-            }
-    }
-
-    private fun startForegroundService() {
-        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_DEFAULT)
-            notificationManager.createNotificationChannel(channel)
-        }
-
-        val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Audio Streaming")
-            .setContentText("The audio streaming is running in the background.")
-            .setSmallIcon(android.R.drawable.ic_notification_overlay)
-            .build()
-
-        startForeground(1, notification)
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        flutterEngine.destroy()  // Clean up and destroy the FlutterEngine
-
-        // Using the updated API for stopForeground with STOP_FOREGROUND_REMOVE
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            stopForeground(Service.STOP_FOREGROUND_REMOVE)
-        } else {
-            stopForeground(true)  // For older Android versions, this still works
-        }
-    }
-
-    override fun onBind(intent: Intent?): android.os.IBinder? {
-        return null
-    }
+    private val CHANNEL_ID = "startForegroundService"
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Log.d("ForegroundService", "onStartCommand called")
+        
+        createNotificationChannel()
+
+        val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Audio Streaming Active")
+            .setContentText("The app is streaming audio in the background.")
+            .setSmallIcon(R.drawable.ic_notification) // Replace with your app's icon
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .build()
+
+        Log.d("ForegroundService", "Notification created")
+
+        // Start the service in the foreground with the notification
+        startForeground(1, notification)
+        Log.d("ForegroundService", "Service started in the foreground")
+
         return START_STICKY
+    }
+
+    override fun onBind(intent: Intent?) = null
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Log.d("ForegroundService", "Creating notification channel")
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "Foreground Service",
+                NotificationManager.IMPORTANCE_HIGH
+            )
+            val manager = getSystemService(NotificationManager::class.java)
+            if (manager != null) {
+                manager.createNotificationChannel(channel)
+                Log.d("ForegroundService", "Notification channel created")
+            } else {
+                Log.e("ForegroundService", "NotificationManager is null, cannot create channel")
+            }
+        } else {
+            Log.d("ForegroundService", "Notification channel not required (below Android O)")
+        }
     }
 }
