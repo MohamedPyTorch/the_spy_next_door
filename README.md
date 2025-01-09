@@ -1,30 +1,63 @@
-# The spy next door
+# The Spy Next Door
 
-An app to connect with the backend and send audio stream "Spying"
-*fail to work in the background
+An app to connect with the backend and send audio streams ("Spying")
 
-How to use:
+**Current Limitation:**
+- Fails to work in the background due to native code issues (under development).
 
-backend "make sure you have node.js installed
-`cd ../backend
- npm install ws speaker wav
- node server.js'
-copy the ip address and port paste it into lib/main.dart
-`_channel = IOWebSocketChannel.connect('ws://192.168.1.12:3000');`
+## How to Use
 
+### Backend
+1. Ensure you have Node.js installed.
+2. Navigate to the backend directory:
+   ```bash
+   cd backend
+   ```
+3. Install the required dependencies:
+   ```bash
+   npm install ws speaker wav
+   ```
+4. Start the server:
+   ```bash
+   node server.js
+   ```
+5. Copy the IP address and port, then paste it into `lib/main.dart`:
+   ```dart
+   _channel = IOWebSocketChannel.connect('ws://192.168.1.12:3000');
+   ```
 
-flutter app
-ensure you have flutter installed and healthy with `flutter doctor` terminal command
-`cd linguini
- flutter clean
- flutter pub get
- flutter build apk --release`
-then you will find the apk in directory
-`build/app/outputs/apk/release/app-release.apk`
-then install it on the target android phone
+### Flutter App
+1. Ensure Flutter is installed and working properly by running:
+   ```bash
+   flutter doctor
+   ```
+2. Navigate to the Flutter project directory:
+   ```bash
+   cd ../linguini
+   ```
+3. Clean the project:
+   ```bash
+   flutter clean
+   ```
+4. Fetch the required dependencies:
+   ```bash
+   flutter pub get
+   ```
+5. Build the release APK:
+   ```bash
+   flutter build apk --release
+   ```
+6. Find the APK in the following directory:
+   ```
+   build/app/outputs/apk/release/app-release.apk
+   ```
+7. Install the APK on the target Android phone.
 
-note: the app fails to work in the background because of native code proplem and it's under dev
-TODO: 1.make auto discover of the backend web server
-      2.foreground service debugging
+**Note:** The app fails to work in the background due to native code issues. This is currently under development.
 
-feel free to fork and add to this open source project 😀
+## TODO
+1. Implement auto-discovery of the backend web server.
+2. Debug and implement foreground service functionality.
+
+Feel free to fork and contribute to this open-source project! 😀
+
