@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:web_socket_channel/io.dart';
@@ -56,16 +55,12 @@ Future<bool> requestPermissions() async {
   var status = await Permission.microphone.status;
 
   if (!status.isGranted) {
-    print("Requesting microphone permissions...");
     status = await Permission.microphone.request();
   }
 
   if (!status.isGranted) {
-    print("Microphone permissions denied.");
     return false;
   }
-
-  print("Microphone permissions granted.");
   return true;
 }
 
@@ -101,7 +96,6 @@ void startBackgroundService() async {
 }
 
 void onStart(ServiceInstance service) {
-  print("Service is running in the background");
   AudioStreamService().startStreaming();
 }
 
@@ -121,10 +115,10 @@ class StreamingScreen extends StatefulWidget {
   const StreamingScreen({super.key});
 
   @override
-  _StreamingScreenState createState() => _StreamingScreenState();
+  StreamingScreenState createState() => StreamingScreenState();
 }
 
-class _StreamingScreenState extends State<StreamingScreen> {
+class StreamingScreenState extends State<StreamingScreen> {
   late AudioStreamService _audioStreamService;
 
   @override
@@ -198,6 +192,5 @@ class AudioStreamService {
 
     // Stop the background service
     FlutterBackgroundService().invoke('stopService');
-    print("Background service stopped");
   }
 }
